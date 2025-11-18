@@ -1,0 +1,39 @@
+********************___666" ___>Elj.opc.
+si no elige ninguna opcion entonces la lectura debe ser obligatoria y mayor a la anterior
+********************___3" ___>Medidor cambiado
+puede ingresar una lectura mayor o menor, eligiendo esta opcion
+katy si o si menor la lectura q la anterior
+********************___5" ___>Sin medidor (retirado)
+en esta opcion q se ase???
+katy ingresado en blanco si o si blanco
+********************___6" ___>Medidor invertido
+en esta opcion q se ase???
+katy cualquier numero, menor o mayor, si o si ingresar algo
+********************___7" ___>Medidor ópaco
+en esta opcion q se ase???
+blanco o con lectura, cualquier numero
+********************___13" ___>Medidor enterrado
+en esta opcion q se ase???
+cualquier numero o en blanco
+********************___24" ___>No tiene caja de medidor
+cualquier lectura mayor al anterior
+********************___25" ___>Caja de medidor sin tapa
+=
+********************___38" ___>Conexión cortcode
+=
+********************___39" ___>Fuga en caja
+=
+********************___40" ___>Medidor paralizado
+>=<
+********************___46" ___>Error de Lectura
+katy si o si algo mayor o menor o igual
+aka puede ingresar menor, si o si ingresar menor
+
+********************___60" ___>Tarifa Industrial
+solo obs
+********************___61" ___>Tarifa Comercial
+solo obs
+
+
+
+60 70 10 11 12 71
