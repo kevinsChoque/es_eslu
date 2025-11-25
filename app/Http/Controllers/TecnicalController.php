@@ -131,8 +131,8 @@ class TecnicalController extends Controller
                 $consumo,
                 $consumog,
                 $promedio,
+                Carbon::create(2025, 11, 24),
                 Carbon::create(2025, 10, 24),
-                Carbon::create(2025, 9, 24),
                 '1',
                 trim($r->inscription)];
             $stmt = sqlsrv_prepare($conSql, $query, $params);
@@ -275,30 +275,30 @@ class TecnicalController extends Controller
                                 ) h
                             WHERE l.FlatEslu = '".$flat."'
                             ORDER BY c.PreMzn, c.PreLote";
-                            // $script="
-                            //     SELECT
-                            //         c.PreMzn AS code,
-                            //         c.PreLote AS cod,
-                            //         c.InscriNro AS numberInscription,
-                            //         c.Clinomx AS client,
-                            //         rz.CalTip AS streetType,
-                            //         rz.CalTip + ' ' + rz.CalDes AS streetDescription,
-                            //         i.Tarifx AS rate,
-                            //         l.MedCodNro AS meter,
-                            //         l.LectAnt AS lecOld3,
-                            //         l.LecAntEslu AS lecOld2,
-                            //         h.HmedLec AS lecOld
-                            //     FROM LECTURA1 l
-                            //     left JOIN CONEXION c ON l.InscriNro = c.InscriNro
-                            //     LEFT JOIN INSCRIPC i ON i.InscriNro = c.InscriNro
-                            //     LEFT JOIN rzcalle rz ON rz.calcod = c.precalle
-                            //     LEFT JOIN (
-                            //         SELECT InscriNry, HmedLec,
-                            //                ROW_NUMBER() OVER (PARTITION BY InscriNry ORDER BY HmedOpeFe DESC) AS rn
-                            //         FROM HISLEC
-                            //     ) h ON h.InscriNry = l.InscriNro AND h.rn = 1
-                            //     WHERE l.PreMzn = '52'
-                            //     ORDER BY c.PreMzn, c.PreLote;";
+                        //     $script="
+                        //         SELECT
+                        //             c.PreMzn AS code,
+                        //             c.PreLote AS cod,
+                        //             c.InscriNro AS numberInscription,
+                        //             c.Clinomx AS client,
+                        //             rz.CalTip AS streetType,
+                        //             rz.CalTip + ' ' + rz.CalDes AS streetDescription,
+                        //             i.Tarifx AS rate,
+                        //             l.MedCodNro AS meter,
+                        //             l.LectAnt AS lecOld3,
+                        //             l.LecAntEslu AS lecOld2,
+                        //             h.HmedLec AS lecOld
+                        //         FROM LECTURA1 l
+                        //         left JOIN CONEXION c ON l.InscriNro = c.InscriNro
+                        //         LEFT JOIN INSCRIPC i ON i.InscriNro = c.InscriNro
+                        //         LEFT JOIN rzcalle rz ON rz.calcod = c.precalle
+                        //         LEFT JOIN (
+                        //             SELECT InscriNry, HmedLec,
+                        //                    ROW_NUMBER() OVER (PARTITION BY InscriNry ORDER BY HmedOpeFe DESC) AS rn
+                        //             FROM HISLEC
+                        //         ) h ON h.InscriNry = l.InscriNro AND h.rn = 1
+                        //         WHERE l.PreMzn = '24'
+                        //         ORDER BY c.PreMzn, c.PreLote;";
                         $scriptCant = "select count(*) as cant from LECTURA1 where FlatEslu='".$flat."'";
                         $stmt = sqlsrv_query($conSql, $script);
                         $stmtCant = sqlsrv_query($conSql, $scriptCant);
