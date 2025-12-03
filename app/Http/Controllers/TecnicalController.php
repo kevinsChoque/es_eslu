@@ -83,6 +83,52 @@ class TecnicalController extends Controller
         }
         return true;
     }
+    public function actEditarLectura(Request $r)
+    {
+        // dd($r->all());
+        try {
+            if($r->lec)
+                $consumo = (int) (($r->lec)-($r->lecAnt));
+            else
+                $consumo = 0;
+            $consumog = (float) number_format($consumo, 2, ',', '');
+            $promedio = $this->obtenerPromedioLecturas($r);
+            $obsValue =  empty($r->obs) || $r->obs==null || $r->obs==666?'0':$r->obs;
+// dd($r->all(),$consumo,$consumog,$promedio,$obsValue);
+$conSql = $this->connectionSql();
+            sqlsrv_begin_transaction($conSql);
+            $query = "UPDATE LECTURA1 SET LectAnt = ?,LecMed = ?, MedObsCod = ?, LFecHorL = ?,
+                Consumo = ?, ConsumoG = ?, Promedio = ?,
+                MedFecha = ?,FecAnt = ?,MedFlag = ? WHERE InscriNro = ?";
+            $params = [trim($r->lecAnt),
+                trim($r->lec),
+                $obsValue,
+                Carbon::now(),
+                $consumo,
+                $consumog,
+                $promedio,
+                Carbon::create(2025, 11, 24),
+                Carbon::create(2025, 10, 24),
+                '1',
+                trim($r->inscription)];
+            $stmt = sqlsrv_prepare($conSql, $query, $params);
+            if (!$stmt || !sqlsrv_execute($stmt))
+            {
+                sqlsrv_rollback($conSql);
+                // DB::rollBack();
+                return response()->json(['state' => false, 'message' => 'Error al actualizar LECTURA1 en SQL Server.'], 500);
+            }
+            sqlsrv_commit($conSql);
+            // DB::commit();
+            return response()->json(['state' => true, 'message' => 'Lectura MODIFICADA, correctamente.']);
+        } catch (\Exception $e)
+        {
+            DB::rollBack(); // Revertir transacción en MySQL
+            if (isset($conSql))
+                sqlsrv_rollback($conSql); // Revertir cambios en SQL Server
+            return response()->json(['state' => false, 'message' => 'Error al actualizar', 'error' => $e->getMessage()], 500);
+        }
+    }
     public function actUpdateLectura(Request $r)
     {
         // dd($r->all());
@@ -411,6 +457,147 @@ class TecnicalController extends Controller
         $listCut = TAssign::find(Session::get('assign')->idAss);
         return response()->json(['state' => true, 'data' => $listCut->listCutsOld]);
     }
+    public function actListCutdt_old()
+    {
+$inicio = microtime(true);   // ⏱ INICIO
+        if (!Session::get('assign'))
+            return response()->json(['data' => [],'error' => 'El técnico aún no cuenta con asignación.']);
+        $conSql = $this->connectionSql();
+        $query = "
+            SELECT
+                c.PreMzn AS code,
+                c.PreLote AS cod,
+                c.InscriNro AS numberInscription,
+                c.Clinomx AS client,
+                rz.CalTip AS streetType,
+                rz.CalTip + ' ' + rz.CalDes AS streetDescription,
+                i.Tarifx AS rate,
+                l.MedCodNro AS meter,
+                l.LectAnt AS lecOld3,
+                l.LecAntEslu AS lecOld2,
+                h.HmedLec AS lecOld,
+                l.LFecHorL,
+                l.LecMed,
+                l.MedObsCod as obs,
+                l.InscriNro as inscription
+            FROM LECTURA1 l
+            INNER JOIN CONEXION c ON l.InscriNro = c.InscriNro
+            LEFT JOIN INSCRIPC i ON i.InscriNro = c.InscriNro
+            LEFT JOIN rzcalle rz ON rz.calcod = c.precalle
+            OUTER APPLY (
+                SELECT TOP 1 HmedLec
+                FROM HISLEC h
+                WHERE h.InscriNry = l.InscriNro
+                ORDER BY h.HmedOpeFe DESC
+            ) h
+            WHERE l.FlatEslu = '".Session::get('assign')->flat."' and MedFlag=1
+            ORDER BY l.LFecHorL desc";
+        $stmt = sqlsrv_prepare($conSql, $query);
+        if (!$stmt)
+            return response()->json(['state' => false, 'data' => [], 'error' => 'Error al preparar la consulta: ' . print_r(sqlsrv_errors(), true)]);
+        if (!sqlsrv_execute($stmt))
+            return response()->json(['state' => false, 'data' => [],'error' => 'Error al ejecutar la consulta: ' . print_r(sqlsrv_errors(), true)]);
+        $data = [];
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {$data[] = $row;}
+$fin = microtime(true); // ⏱ FIN
+$duracion = round($fin - $inicio, 4); // segundos, con 4 decimales
+    // Responder en formato DataTables
+return response()->json([
+    'data' => $data,
+    'state' => true,
+    'tiempo' => $duracion . ' segundos'
+]);
+        return response()->json(['data' => $data, 'state' => true]);
+    }
+    public function actListCutdt(Request $request)
+    {
+        $inicio = microtime(true);
+
+        if (!Session::get('assign')) {
+            return response()->json(['state' => false, 'data' => [], 'error' => 'El técnico aún no cuenta con asignación.']);
+        }
+
+        // ⬅️ Datos para paginación
+        $page = intval($request->page ?? 1);
+        $perPage = intval($request->per_page ?? 3);
+        $offset = ($page - 1) * $perPage;
+
+        $conSql = $this->connectionSql();
+
+        // =======================
+        // 🔹 1. Obtener total
+        // =======================
+        $queryTotal = "
+            SELECT COUNT(*) AS total
+            FROM LECTURA1
+            WHERE FlatEslu = '" . Session::get('assign')->flat . "'
+            AND MedFlag = 1
+        ";
+
+        $stmtTotal = sqlsrv_query($conSql, $queryTotal);
+        $rowTotal = sqlsrv_fetch_array($stmtTotal, SQLSRV_FETCH_ASSOC);
+        $total = $rowTotal['total'];
+
+        // =======================
+        // 🔹 2. Query paginada
+        // =======================
+        $query = "
+            SELECT
+                c.PreMzn AS code,
+                c.PreLote AS cod,
+                c.InscriNro AS numberInscription,
+                c.Clinomx AS client,
+                rz.CalTip AS streetType,
+                rz.CalTip + ' ' + rz.CalDes AS streetDescription,
+                i.Tarifx AS rate,
+                l.MedCodNro AS meter,
+                l.LectAnt AS lecOld3,
+                l.LecAntEslu AS lecOld2,
+                h.HmedLec AS lecOld,
+                l.LFecHorL,
+                l.LecMed,
+                l.MedObsCod as obs,
+                l.InscriNro as inscription
+            FROM LECTURA1 l
+            INNER JOIN CONEXION c ON l.InscriNro = c.InscriNro
+            LEFT JOIN INSCRIPC i ON i.InscriNro = c.InscriNro
+            LEFT JOIN rzcalle rz ON rz.calcod = c.precalle
+            OUTER APPLY (
+                SELECT TOP 1 HmedLec
+                FROM HISLEC h
+                WHERE h.InscriNry = l.InscriNro
+                ORDER BY h.HmedOpeFe DESC
+            ) h
+            WHERE l.FlatEslu = '" . Session::get('assign')->flat . "'
+            AND MedFlag = 1
+            ORDER BY l.LFecHorL DESC
+            OFFSET {$offset} ROWS FETCH NEXT {$perPage} ROWS ONLY
+        ";
+
+        $stmt = sqlsrv_query($conSql, $query);
+        $data = [];
+
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $data[] = $row;
+        }
+
+        $fin = microtime(true);
+        $duracion = round($fin - $inicio, 4);
+
+        return response()->json([
+            'state' => true,
+            'data' => $data,
+            'total' => $total,
+            'per_page' => $perPage,
+            'current_page' => $page,
+            'last_page' => ceil($total / $perPage),
+            'tiempo' => $duracion . ' segundos'
+        ]);
+    }
+
+
+
+
     public function actListCut2(Request $r)
     {
         // quiero sacar el assign de la variable de sesion q ya existe con su id quiero sacarlo

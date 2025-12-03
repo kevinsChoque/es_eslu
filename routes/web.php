@@ -38,8 +38,10 @@ Route::middleware([MDUser::class])->group(function () {
     Route::post('tecnical/showBlue',[TecnicalController::class, 'actShowBlue'])->name('showBlue');
     // --------------------------------------------------------------------test
     Route::get('tecnical/listCut',[TecnicalController::class, 'actListCut'])->name('listCut');
+    Route::get('tecnical/listCutdt',[TecnicalController::class, 'actListCutdt'])->name('listCutdt');
 
 Route::get('tecnical/updateLectura',[TecnicalController::class, 'actUpdateLectura'])->name('updateLectura');
+Route::get('tecnical/editarLectura',[TecnicalController::class, 'actEditarLectura'])->name('editarLectura');
     Route::post('tecnical/listCut2',[TecnicalController::class, 'actListCut2'])->name('listCut2');
     // evidence
     Route::post('evidence/sendEvidence',[EvidenceController::class, 'actSendEvidence'])->name('sendEvidence');
@@ -72,6 +74,7 @@ Route::get('tecnical/updateLectura',[TecnicalController::class, 'actUpdateLectur
     Route::post('court/saveComentario',[CourtController::class, 'actSaveComentario'])->name('saveComentario');
 });
 Route::get('tecnical/showAsignacion',[TecnicalController::class, 'actShowAsignacion'])->name('showAsignacion');
+
 
 
 

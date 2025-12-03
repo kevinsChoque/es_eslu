@@ -7,7 +7,9 @@
         <div class="col-lg-6 col-sm-6">
             <button class="btn btn-primary w-100" onclick="actualizarDatos();"><i class="fa fa-sync"></i> Actualizar datos</button>
         </div>
-        
+        <div class="col-lg-6 col-sm-6">
+            <button class="btn btn-info w-100" onclick="showLecturasReg();"><i class="fa fa-edit"></i> Editar lectura</button>
+        </div>
     </div>
 </div>
 
@@ -50,17 +52,15 @@
                         <thead>
                             <tr class="text-center">
                                 <th width="3%" class="text-center">#</th>
-                                <th width="6%" class="text-center">Código</th>
-                                <th width="6%" class="text-center">Inscripción</th>
-                                <th width="6%" class="text-center">Inscripción</th>
+                                <th width="6%" class="text-center">Informacion</th>
+                                <th width="6%" class="text-center">Datos</th>
+                                <th width="6%" class="text-center">Opc.</th>
                             </tr>
                         </thead>
                         <tbody id="recordsCourt">
                         </tbody>
                     </table>
-
                 </div>
-
             </div>
         </div>
     </div>
@@ -146,7 +146,7 @@
 
 
 <!-- Botón flotante con búsqueda -->
-<div id="scrollToInsButton" style="
+<div id="scrollToInsButton" class="opcPantalla" style="
     position: fixed;
     bottom: 20px;
     left: 20px;
@@ -166,7 +166,143 @@
 
     </div>
 </div>
+<div class="modal fade" id="showLescturasRegistradas" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header py-1">
+                <h5 class="modal-title" id="miModalLabel"><i class="fa fa-list"></i> Lecturas registradas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table id="tableLecturas" class="table table-striped table-hover" width="100%">
+                    <thead>
+                        <tr class="text-center">
+                            <th width="3%" class="text-center">#</th>
+                            <th width="6%" class="text-center">Informacion</th>
+                            <th width="6%" class="text-center">Datos</th>
+                            <th width="6%" class="text-center">Opc.</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recordsEdit">
+                    </tbody>
+                </table>
+                <div id="paginacionLecturas" class="d-flex justify-content-center mt-2"></div>
+            </div>
+            {{-- <div class="modal-footer py-1">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary">Guardar</button>
+            </div> --}}
+        </div>
+    </div>
+</div>
+<script>
+    let paginaActual = 1;
+    let porPagina = 3;
+    let modalAbierto = false;
 
+    function showLecturasReg(pagina = 1)
+    {
+        paginaActual = pagina;
+        $('.overlayPage').css("display","flex");
+        $.ajax({
+            url: "{{ route('listCutdt') }}",
+            method: "GET",
+            data: {page: paginaActual,per_page: porPagina},
+            dataType: 'json',
+            success: function (r)
+            {
+                console.dir(r)
+                if (!r.state)
+                {
+                    msgImportant(r);
+                    $('.overlayPage').hide();
+                    return;
+                }
+                renderTableEdit(r.data);
+                renderPaginacion(r.current_page, r.last_page);
+                // ✔ SOLO SE ABRE EL MODAL LA PRIMERA VEZ
+                if (!modalAbierto)
+                {
+                    var myModal = new bootstrap.Modal(document.getElementById('showLescturasRegistradas'));
+                    myModal.show();
+                    modalAbierto = true;
+                    $('.opcPantalla').css('display','none')
+                }
+                $('.overlayPage').hide();
+            },
+            error: function () {
+                alert("Error al cargar datos");
+                $('.overlayPage').hide();
+            }
+        });
+    }
+    function renderPaginacion_old(actual, totalPaginas)
+    {
+        let html = '';
+        // Botón anterior
+        if (actual > 1)
+            html += `<button class="btn btn-sm btn-primary mx-1" onclick="showLecturasReg(${actual - 1})">«</button>`;
+        // Números de página
+        for (let i = 1; i <= totalPaginas; i++)
+        {
+            html += `
+                <button class="btn btn-sm ${i === actual ? 'btn-success' : 'btn-outline-secondary'} mx-1"
+                    onclick="showLecturasReg(${i})">${i}</button>
+            `;
+        }
+        // Botón siguiente
+        if (actual < totalPaginas)
+            html += `<button class="btn btn-sm btn-primary mx-1" onclick="showLecturasReg(${actual + 1})">»</button>`;
+        $("#paginacionLecturas").html(html);
+    }
+    function renderPaginacion(actual, totalPaginas) {
+        let html = '';
+
+        // Botón « anterior
+        if (actual > 1)
+            html += `<button class="btn btn-sm btn-primary mx-1" onclick="showLecturasReg(${actual - 1})">«</button>`;
+
+        // Mostrar siempre la página 1
+        if (actual !== 1) {
+            html += `<button class="btn btn-sm btn-outline-secondary mx-1" onclick="showLecturasReg(1)">1</button>`;
+        }
+
+        // Agregar "..." si estamos lejos del inicio
+        if (actual > 3)
+            html += `<span class="mx-1">...</span>`;
+
+        // Páginas cercanas
+        for (let i = actual - 1; i <= actual + 1; i++) {
+            if (i > 1 && i < totalPaginas) {
+                html += `
+                    <button class="btn btn-sm ${i === actual ? 'btn-success' : 'btn-outline-secondary'} mx-1"
+                        onclick="showLecturasReg(${i})">${i}</button>
+                `;
+            }
+        }
+
+        // Agregar "..." si estamos lejos del final
+        if (actual < totalPaginas - 2)
+            html += `<span class="mx-1">...</span>`;
+
+        // Mostrar siempre la última página
+        if (actual !== totalPaginas) {
+            html += `<button class="btn btn-sm btn-outline-secondary mx-1" onclick="showLecturasReg(${totalPaginas})">${totalPaginas}</button>`;
+        }
+
+        // Botón siguiente »
+        if (actual < totalPaginas)
+            html += `<button class="btn btn-sm btn-primary mx-1" onclick="showLecturasReg(${actual + 1})">»</button>`;
+
+        $("#paginacionLecturas").html(html);
+    }
+
+    // Cuando el modal se cierra, resetear la variable
+    $('#showLescturasRegistradas').on('hidden.bs.modal', function () {
+        modalAbierto = false;
+        $('.opcPantalla').css('display','flex')
+    });
+</script>
 <script>
     let coincidencias = [];
     let indiceActual = 0;
@@ -176,6 +312,124 @@
             row.style.backgroundColor = "";
         });
     }
+    let lecturasTable; // global eliminar
+    // var ppp;
+function showLecturasReg_old() {
+    // console.time("Tiempo AJAX");
+    let inicio = performance.now();
+    // var myModal = new bootstrap.Modal(document.getElementById('showLescturasRegistradas'));
+    //         myModal.show();
+    $('.overlayPage').css("display","flex");
+    jQuery.ajax({
+        url: "{{ route('listCutdt') }}",
+        method: 'GET',
+        dataType: 'json',
+        headers: { 'X-CSRF-TOKEN': "{{ csrf_token() }}" },
+        success: function (r) {
+            let fin = performance.now();
+            let ms = fin - inicio;
+            let segundos = ms / 1000;
+            console.log("Tiempo AJAX d:", ms.toFixed(2), "ms");
+            console.log("Tiempo AJAX en segundos d:", segundos.toFixed(3), "s");
+            console.log(r)
+            if (!r.state)
+            {
+                msgImportant(r)
+                $('.overlayPage').hide();
+                return;
+            }
+            renderTableEdit(r.data);
+            // $('#showLescturasRegistradas').modal('show')
+            var myModal = new bootstrap.Modal(document.getElementById('showLescturasRegistradas'));
+            myModal.show();
+        },
+        error: function (xhr, status, error) {
+            let fin = performance.now();
+            let ms = fin - inicio;
+            console.log("Tiempo AJAX (error):", ms.toFixed(2), "ms");
+            alert("Algo salió mal, por favor contacte con el Administrador.");
+            console.error("Error en AJAX:", error);
+        }
+    });
+}
+function renderTableEdit(data) {
+    let htmlCourt = '';
+    let countRecords = 0;
+    console.log(typeof data)
+
+    if (!Array.isArray(data)) {
+        data = Object.values(data);
+    }
+    data.forEach((item, index) => {
+        countRecords++;
+        const rowId = `row-detail-${countRecords}`;
+        const rowClass = index % 2 === 0 ? 'row-light' : 'row-dark'; // Alternar clases
+        htmlCourt += `
+            <tr class="main-row ${rowClass} ${item.inscription} searchHere" data-target="#${rowId}" style="cursor: pointer;"
+                data-inscription="${item.inscription}" data-nombre="${item.client}"
+                data-meter="${item.meter}" data-lote="${item.cod}" data-direccion="${item.streetDescription}">
+
+                <td class="align-middle text-center">${countRecords}</td>
+                <td class="align-middle text-center cellCode" style="line-height: 1;">
+                    ${novDato(item.code)} - ${novDato(item.cod)}<br>
+                    ${novDato(item.meter)}<br>
+                    <span style="font-size: .78em; line-height: 1; display: block;">Tarifa: ${novDato(item.rate)}</span>
+                    <span style="font-size: .72em; line-height: 1; display: block;">${novDato(item.client)}</span>
+                </td>
+                <td class="align-middle text-center">
+                    <p class="m-0">L.A.: <span class="emuLaEdit">${novDato(item.lecOld)}</span></p>
+                    <input type="tel" class="form-control lecturaEdit" data-row="${item.inscription}" data-ins="${item.inscription}" value="${isEmptyl(item.LecMed)}">
+                    <select class="form-control obsEdit" onchange="saveLsObs(this);" data-ins="${item.inscription}">
+                        <option value="0" disabled ${item.obs === 0 ? "selected" : ""}>Elj.opc.</option>
+                        <option value="3" ${item.obs === 3 ? "selected" : ""}>Medidor cambiado</option>
+                        <option value="5" ${item.obs === 5 ? "selected" : ""}>Sin medidor (retirado)</option>
+                        <option value="6" ${item.obs === 6 ? "selected" : ""}>Medidor invertido</option>
+                        <option value="7" ${item.obs === 7 ? "selected" : ""}>Medidor ópaco</option>
+                        <option value="13" ${item.obs === 13 ? "selected" : ""}>Medidor enterrado</option>
+                        <option value="24" ${item.obs === 24 ? "selected" : ""}>No tiene caja de medidor</option>
+                        <option value="25" ${item.obs === 25 ? "selected" : ""}>Caja de medidor sin tapa</option>
+                        <option value="38" ${item.obs === 38 ? "selected" : ""}>Conexión cortada</option>
+                        <option value="39" ${item.obs === 39 ? "selected" : ""}>Fuga en caja</option>
+                        <option value="40" ${item.obs === 40 ? "selected" : ""}>Medidor paralizado</option>
+                        <option value="46" ${item.obs === 46 ? "selected" : ""}>Error de Lectura</option>
+                        <option value="60" ${item.obs === 60 ? "selected" : ""}>Tarifa Industrial</option>
+                        <option value="61" ${item.obs === 61 ? "selected" : ""}>Tarifa Comercial</option>
+                    </select>
+                </td>
+                <td class="align-middle text-center">
+                    <button class="btn btn-primary sendLectura" onclick="sendDataEdit(this);"
+                    data-row="${item.inscription}"
+                    data-ins="${item.inscription}"
+                    data-lecAnt="${novDato(item.lecOld)}"
+                    >
+                        <i class="fa fa-paper-plane"></i>
+                    </button>
+
+                </td>
+            </tr>
+        `;
+        // <button type="button" class="btn btn-secondary" data-ins="${item.inscription}" onclick="registrarComentario(this);">
+        //     <i class="fa fa-comment"></i>
+        // </button>
+    });
+    $('#recordsEdit').html(htmlCourt);
+    // Toggle de filas
+    // $('.main-row').off('click').on('click', function () {
+    //     const target = $(this).data('target');
+    //     $(target).toggle();
+    // });
+    // -------
+    // $('.main-row td:first-child').off('click').on('click', function (e) {
+    //     e.stopPropagation(); // Evita que otros eventos burbujeen
+    //     const row = $(this).closest('.main-row');
+    //     const target = row.data('target');
+    //     $(target).toggle();
+    // });
+
+    // $(".containerSpinner").removeClass("d-flex").addClass("d-none");
+    $('.overlayPage').hide();
+}
+
     function buscarCoincidencias() {
         const searchTerm = document.getElementById("searchInsInput").value.trim().toLowerCase();
         coincidencias = [];
@@ -248,7 +502,7 @@
 </script>
 
 <!-- BOTÓN: Ir al inicio -->
-<button id="scrollTopButton" style="
+<button id="scrollTopButton" class="opcPantalla" style="
     position: fixed;
     bottom: 114px;
     left: 20px;
@@ -284,10 +538,6 @@ function ajustarBotonInicio(segunBusquedaActiva) {
     }
 }
 </script>
-
-
-
-
 <style>
     .row-light {
     background-color: #f2f2f2;
@@ -297,7 +547,7 @@ function ajustarBotonInicio(segunBusquedaActiva) {
     background-color: #ffffff;
 }
 </style>
-<button id="btnBuscarFlotante" style="
+{{-- <button id="btnBuscarFlotante" style="
     position: fixed;
     bottom: 20px;
     left: 20px;
@@ -311,9 +561,9 @@ function ajustarBotonInicio(segunBusquedaActiva) {
     cursor: pointer;
     z-index: 1000;">
     🔍
-</button>
+</button> --}}
 <!-- Panel flotante con input de búsqueda -->
-<div id="panelBusqueda" style="
+{{-- <div id="panelBusqueda" style="
     position: fixed;
     bottom: 80px;
     left: 20px;
@@ -321,7 +571,7 @@ function ajustarBotonInicio(segunBusquedaActiva) {
     padding: 10px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    display: none;
+
     z-index: 1001;">
     <input type="text" id="busquedaFlotante" placeholder="Buscar en la tabla..." class="form-control" />
 </div>
@@ -343,7 +593,7 @@ function ajustarBotonInicio(segunBusquedaActiva) {
             tabletest.search($(this).val()).draw();
         });
     });
-</script>
+</script> --}}
 <style>
     /* .activate-row{background: rgba(0, 255, 0, 0.5) !important;}
     .green-row{background: rgba(119, 163, 69, 0.5) !important;}
@@ -452,23 +702,6 @@ function notify(resp)
     title: resp.message,
     });
 }
-function cutUpdateLs(inscription,action)
-{
-    var listObject = JSON.parse(localStorage.getItem('__LISTLECTURA__'));
-    for (var i = 0; i < listObject.length; i++)
-    {
-        if (listObject[i].numberInscription === inscription) {
-            listObject[i].courtState = action ? '4':null;
-            break;
-        }
-    }
-    var updatedListString = JSON.stringify(listObject);
-    localStorage.setItem('__LISTLECTURA__', updatedListString);
-    return updatedListString;
-    console.log('Datos actualizados en localStorage');
-}
-
-var arow;
 function updateRecords()
 {
     buildTable();
@@ -518,7 +751,68 @@ function saveLsObs(ele)
     else
         console.warn("No se encontró la inscripción:", $(ele).attr('data-ins'));
 }
-var rrr;
+function sendDataEdit(ele)
+{
+    $('.overlayPage').css("display","flex");
+    let lecAnt = parseFloat($(ele).attr('data-lecAnt'))
+    let lecturaEdit = parseFloat($(ele).parent().parent().find('.lecturaEdit').val())
+    let obsEdit = $(ele).parent().parent().find('.obsEdit').val()
+    console.log('lecAnt:'+lecAnt+'---lecturaEdit:'+lecturaEdit)
+    if(obsEdit==666 || obsEdit==0 || obsEdit===null)
+    {
+        if(lecturaEdit<lecAnt || lecturaEdit === "")
+        {notify({state:false,message:'Ingrese una lectura mayor a la anterior.'});return;}
+    }
+    if(obsEdit==3) //medidor cambiado
+    {
+        if(lecturaEdit>lecAnt || lecturaEdit == '')
+        {notify({state:false,message:'La lectura debe ser menor que la lectura anterior.'});return;}
+    }
+    if(obsEdit==5) //sin medidor
+    {lecturaEdit='';}
+    if(obsEdit==6 || obsEdit==46) //medidor invertido - error de lectura
+    {
+        if (!lecturaEdit || lecturaEdit === "")
+        {notify({state:false,message:'Debe ingresar una lectura antes de enviar.'});return;}
+    }
+    // // 7,13,24,25,38,39,40,
+    if(obsEdit==60) //tarifa industrial
+    {
+        if(lecturaEdit<lecAnt || lecturaEdit === "")
+        {notify({state:false,message:'Ingrese una lectura mayor a la anterior.'});return;}
+    }
+    if(obsEdit==61) //tarifa comercial
+    {
+        if(lecturaEdit<lecAnt || lecturaEdit === "")
+        {notify({state:false,message:'Ingrese una lectura mayor a la anterior.'});return;}
+    }
+
+    $.ajax({
+        url: "{{ route('editarLectura') }}",
+        method: "get",
+        data: {
+            inscription: $(ele).attr('data-ins'),
+            lec: lecturaEdit,
+            obs: obsEdit,
+            lecAnt: lecAnt
+        },
+        dataType: "json",
+        success: function (r)
+        {
+            msgImportant(r)
+            $('.overlayPage').css("display","none");
+        },
+        error: function (xhr, status, error) {
+            console.log(xhr)
+            console.log(status)
+            console.log(error)
+            console.error("Error en AJAX:", error);
+            // alert(xhr.responseJSON.error);
+            // $('.overlayPage').hide();
+            $('.overlayPage').css("display","none");
+        }
+    });
+}
 function sendData(ele)
 {
     // $("."+$(ele).attr('data-row')).remove();
@@ -754,7 +1048,8 @@ function actualizarDatos()
 }
 function fillRecords2() {
     // $('.containerRecordsBlue').hide();
-    console.time("Tiempo total fillRecords2");
+    console.log('este es tab')
+    // console.time("Tiempo total fillRecords2");
     $('.containerRecordsCuts').show();
     let storedData = localStorage.getItem('__LISTLECTURA__');
     if (storedData)
@@ -766,7 +1061,7 @@ function fillRecords2() {
             {
                 renderTable(data);
                 console.log('data guadada')
-                console.timeEnd("Tiempo total fillRecords2");
+                // console.timeEnd("Tiempo total fillRecords2");
                 return;
             }
         } catch (error) {
@@ -790,7 +1085,7 @@ function fillRecords2() {
             localStorage.setItem('__LISTLECTURA__', r.data);
             renderTable(JSON.parse(r.data));
             console.log('trajo data')
-            console.timeEnd("Tiempo total fillRecords2");
+            // console.timeEnd("Tiempo total fillRecords2");
         },
         error: function (xhr, status, error) {
             alert("Algo salió mal, por favor contacte con el Administrador.");
@@ -975,18 +1270,11 @@ function renderTable2(data)
                         <option value="60" ${item.obs === "60" ? "selected" : ""}>Tarifa Industrial</option>
                         <option value="61" ${item.obs === "61" ? "selected" : ""}>Tarifa Comercial</option>
                     </select>
-
                 </td>
                 <td class="align-middle text-center">
                     <button class="btn btn-primary sendLectura" onclick="sendData(this);" data-row="${item.inscription}" data-ins="${item.inscription}">
                         <i class="fa fa-paper-plane"></i>
                     </button>
-
-
-
-
-
-
                 </td>
             </tr>
         `;
